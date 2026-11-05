@@ -1,0 +1,61 @@
+public class User
+{
+    public string Username { get; }
+    public string Password { get; }
+    public string Role { get; }
+
+    public User(string username, string password, string role)
+    {
+        Username = username;
+        Password = password;
+        Role = role;
+    }
+}
+
+public interface IUserServiceDatabase {
+
+	// Save a user
+	void saveUser(String username, String password, String role);
+
+	// Check if username exists
+	boolean usernameExists(String username);
+
+	// Get stored password
+	String getPassword(String username);
+
+	// Get stored role
+	String getRole(String username);
+
+}
+
+public class UserDatabaseStub : IUserServiceDatabase 
+{
+    // Store users as objects instead of parallel lists
+    private List<User> users = new List<User>();
+
+    // Save a user
+    public void SaveUser(string username, string password, string role)
+    {
+        users.Add(new User(username, password, role));
+    }
+
+    // Check if username exists
+    public bool UsernameExists(string username)
+    {
+        return users.Any(u => u.Username == username);
+    }
+
+    // Get stored password
+    public string GetPassword(string username)
+    {
+        var user = users.FirstOrDefault(u => u.Username == username);
+        return user?.Password;
+    }
+
+    // Get stored role
+    public string GetRole(string username)
+    {
+        var user = users.FirstOrDefault(u => u.Username == username);
+        return user?.Role;
+    }
+}

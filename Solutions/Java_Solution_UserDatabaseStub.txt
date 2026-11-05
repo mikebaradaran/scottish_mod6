@@ -1,0 +1,182 @@
+package testingDemos;
+
+public class UserService {
+
+	IUserServiceDatabase userDatabase;
+
+	public UserService(IUserServiceDatabase repo) {
+		this.userDatabase = repo;
+	}
+
+	public void RegisterUser(String username, String password, String role) {
+		// The user name already exists. ☢️
+		if (userDatabase.usernameExists(username))
+			throw new IllegalArgumentException();
+		
+		// Password length
+		if (password.length() < 8) {
+			throw new IllegalArgumentException("Password must be at least 8 chars long");
+		}
+
+		// Must contain a number
+		if (!password.matches(".*\\d.*")) {
+			throw new IllegalArgumentException("Password must contain at least 1  number");
+		}
+
+		// Must contain special character !
+		if (!password.contains("!")) {
+			throw new IllegalArgumentException("Password must contain '!'");
+		}
+
+		// Valid roles
+		String[] validRoles = { "admin", "manager", "support", "trainer" };
+		boolean valid = false;
+
+		for (String r : validRoles) {
+			if (r.equals(role)) {
+				valid = true;
+				break;
+			}
+		}
+
+		if (!valid) {
+			throw new IllegalArgumentException("Invalid role");
+		}
+
+		// SKIPPED: saving user (requires database)  ☢️
+		userDatabase.saveUser(username, password, role);
+
+	}
+
+	public boolean loginUser(String username, String password) {
+
+		if (username == null || username.trim().isEmpty()) {
+			throw new IllegalArgumentException("Username cannot be null or empty");
+		}
+
+		// SKIPPED: checking if user exists (requires database)
+		if(!userDatabase.usernameExists(username))
+			return false;
+		
+		// SKIPPED: checking stored password (requires database)
+		if(!password.equals(userDatabase.getPassword(username)))
+			return false;
+
+		return true;
+	}
+
+	public boolean hasAccess(String username, String requiredRole) {
+
+		if (username == null || username.trim().isEmpty()) {
+			throw new IllegalArgumentException("Username cannot be null or empty");
+		}
+
+		// SKIPPED: looking up user role (requires database)
+		if(!requiredRole.equals(userDatabase.getRole(username)))
+			return false;
+
+		// Always false for now (no stored users)
+		return true;
+	}
+}
+//-------------------------------------------------------------------
+
+public interface IUserServiceDatabase {
+
+	// Save a user
+	void saveUser(String username, String password, String role);
+
+	// Check if username exists
+	boolean usernameExists(String username);
+
+	// Get stored password
+	String getPassword(String username);
+
+	// Get stored role
+	String getRole(String username);
+
+}
+//------------------------------------------------------------------
+import java.util.ArrayList;
+
+public class UserServiceDatabaseStub implements IUserServiceDatabase {
+
+	// Store users as objects instead of parallel lists
+	private ArrayList<User> users = new ArrayList<>();
+
+	// Save a user
+	@Override
+	public void saveUser(String username, String password, String role) {
+		users.add(new User(username, password, role));
+	}
+
+	// Check if username exists
+	@Override
+	public boolean usernameExists(String username) {
+		return users.stream().anyMatch(u -> u.getUsername().equals(username));
+	}
+
+	// Get stored password
+	@Override
+	public String getPassword(String username) {
+		return users.stream().filter(u -> u.getUsername().equals(username)).map(User::getPassword).findFirst()
+				.orElse(null);
+	}
+
+	// Get stored role
+	@Override
+	public String getRole(String username) {
+		return users.stream().filter(u -> u.getUsername().equals(username)).map(User::getRole).findFirst().orElse(null);
+	}
+}
+//------------------------------------------------------------------
+public class User {
+    private String username;
+    private String password;
+    private String role;
+
+    public User(String username, String password, String role) {
+        this.username = username;
+        this.password = password;
+        this.role = role;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+//-----------------------------------------Test-------------------------
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class UserServiceTests {
+	UserService userService;
+
+	@BeforeEach
+	void setUp() throws Exception {
+		UserServiceDatabaseStub stub = new UserServiceDatabaseStub();
+		stub.saveUser("Bob", "Password1$", "admin");
+		stub.saveUser("Linda", "Password1$", "admin");
+		stub.saveUser("Sean", "Password1$", "guest");
+		userService = new UserService(stub);
+	}
+
+	@Test
+	void test_RegusterUser_with_an_existing_user_Throws_Exception() {
+		assertThrows(IllegalArgumentException.class, () -> {
+			userService.RegisterUser("Bob", "any", "any");
+		});
+	}
+}
+
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+}
